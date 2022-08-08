@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ code_name }}</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/atom-one-dark.min.css')}}">
+    <script src="{{ url_for('static', filename='highlight.js')}}"></script>
+    <script src="{{ url_for('static', filename='highlightjs-line-numbers.js')}}"></script>
+    <script src="{{ url_for('static', filename='languages/actionscript.min.js')}}"></script>
+    <style>
+    .hljs-ln{
+      border-collapse:collapse
+    }
+    .hljs-ln td{
+      padding:0
+    }
+    .hljs-ln-n:before{
+      content:attr(data-line-number)
+    }
+    </style>
+    <script>
+      hljs.highlightAll();
+      hljs.initLineNumbersOnLoad();
+    </script>
+    <style>
+    td.hljs-ln-numbers {
+      text-align: center;
+      color: #ccc;
+      border-right: 1px solid #999;
+      vertical-align: top;
+      padding-right: 5px;
+
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+    td.hljs-ln-code {
+      padding-left: 10px;
+    }
+
+    code {
+      white-space: pre-wrap;
+      overflow: auto;
+    }
+    .page {
+        display: flex;
+        flex-direction: row;
+        height: 80vh;
+    }
+    .container {
+        display:flex;
+        width: 50%;
+    }
+    </style>
+</head>
+<body class="hljs">
+<div class="page">
+<div class="container">
+<pre><code class="language-actionscript">
+{{ code }}
+</code></pre>
+</div>
+<iframe class="container" src="https://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/events/{{ code_name }}.html"></iframe>
+</div>
+</body>
+</html>
