@@ -19,10 +19,11 @@ known_imports = {
     "BitmapData": "import flash.display.BitmapData;"
 }
 
-ASClassProp = namedtuple("ASClassProp", ["name", "type", "desc", "readonly"])
 ASClassMethod = namedtuple("ASClassMethod", ["name", "sig", "desc"])
 ASClassConst = namedtuple("ASClassConst", ["name", "sig", "desc"])
 
+class UnknownConstructorError(NameError):
+    pass
 
 @dataclass
 class ASConArg:
@@ -30,6 +31,95 @@ class ASConArg:
     type: str = ""
     default: str = ""
     readonly: bool = False
+
+
+class ASClassProp:
+    def __init__(self, _name, _type, _desc, _readonly):
+        self.name = _name
+        self.type = _type
+        self.desc = _desc
+        self.readonly = _readonly
+
+        self.con_arg_order = -1
+        self.con_arg = None
+
+    def connect_to_con_arg(self, i_con_arg, con_arg):
+        self.con_arg_order = i_con_arg
+
+        con_arg.readonly = self.readonly
+        self.con_arg = con_arg
+
+    def __str__(self):
+        return f"<ASClassProp name:{self.name}; type:{self.type}; readonly:{self.readonly}; con_arg : [{self.con_arg_order}] = {self.con_arg}>"
+
+class ASClassPropList:
+    def __init__(self):
+        self.prop_list = dict()
+
+    def add_property(self, _name, _type, _desc, _readonly):
+        self.prop_list[_name] = ASClassProp(_name, _type, _desc, _readonly)
+
+    def valid(self):
+        return len(self.prop_list.keys()) > 0
+
+    def reset(self):
+        self.prop_list = dict()
+
+    def get_property(self, name):
+        return self.prop_list[name]
+
+    def get_properties(self):
+        return list(self.prop_list.values())
+
+    def _get_max_con_arg(self):
+        orders = [x.con_arg_order for x in self.get_properties()]
+        if len(orders) == 1:
+            return orders[0]
+        else:
+            return max(*orders)
+
+    def _get_co_prop_helper(self):
+        rv = [None for _ in range(self._get_max_con_arg() + 2)]
+        frv = []
+        for prop in self.get_properties():
+            if prop.con_arg_order < 0:
+                frv.append(prop)
+            else:
+                rv[prop.con_arg_order] = prop
+        rv = [xx for xx in rv if xx is not None]
+        return rv, frv
+
+    def get_properties_by_con_order(self):
+        if not self.valid():
+            return list()
+        rv, frv = self._get_co_prop_helper()
+        rv.extend(frv)
+        return rv
+
+    def get_properties_with_con_order(self):
+        if not self.valid():
+            return list()
+        rv, _ = self._get_co_prop_helper()
+        return rv
+
+    def connect(self, con_arg_index, in_con_arg, stage):
+        con_arg_used = False
+        for prop_name, prop_obj in self.prop_list.items():
+            if stage == 0:
+                prop_name_in_con = prop_name.lower().strip() in in_con_arg.name.lower().strip()
+            else:
+                prop_name_in_con = prop_name[0].lower().strip() in in_con_arg.name.lower().strip()
+
+            prop_type_match = prop_obj.type == in_con_arg.type
+            prop_not_used = prop_obj.con_arg_order < 0
+
+            if prop_name_in_con and prop_type_match and prop_not_used:
+                prop_obj.connect_to_con_arg(con_arg_index, in_con_arg)
+                con_arg_used = True
+        return con_arg_used
+
+    def __str__(self):
+        return f"<ASClassPropList : {self.get_properties()}>"
 
 
 asm_event_template = Template("""
@@ -84,7 +174,7 @@ class ActionScriptMaker:
 
     def _make_props(self):
         # Find and Parse Class Properties
-        self.class_props = {}
+        self.class_props = ASClassPropList()
         prop_table = self.soup.find("table", id="summaryTableProperty")
         for t in prop_table.find_all("tr"):
             if ("class" in t.attrs) and ("hideInheritedProperty" in t.attrs["class"]):
@@ -94,13 +184,12 @@ class ActionScriptMaker:
                 continue
             name_tag = sig_col.find("a", class_="signatureLink")
             desc_tag = " ".join(sig_col.select_one(".summaryTableDescription").text.strip().split())
-            new_prop = ASClassProp(
+            self.class_props.add_property(
                 name_tag.text,
                 name_tag.find_next_sibling("a").text,
                 desc_tag,
                 "[read-only]" in desc_tag
             )
-            self.class_props[new_prop.name] = new_prop
 
     def _make_methods(self):
         # Find and Parse Class Methods
@@ -125,6 +214,8 @@ class ActionScriptMaker:
         # Find and Parse Class Constants
         self.class_constants = []
         constant_table = self.soup.find("table", id="summaryTableConstant")
+        if constant_table is None:
+            return
         for t in constant_table.find_all("tr"):
             if ("class" in t.attrs) and ("hideInheritedConstant" in t.attrs["class"]):
                 continue
@@ -167,56 +258,33 @@ class ActionScriptMaker:
     def _make_constructor(self):
         # The constructor is one of the more complicated parts of this process
         # as we need to identify which properties correspond to which input arguments
-        # This is done by matching variable names and types; then matching only types. Any input argument
+        # This is done by matching variable names and types;
+        # then matching types and contains the first letter. Any input argument
         # which was not identified with a property is assumed to be an input to the super function
-        # (this has about a 50/50 correct rate)
-
-        self.con_code = self.code_connect[self.class_name]
+        try:
+            self.con_code = self.code_connect[self.class_name]
+        except KeyError:
+            raise UnknownConstructorError
         self.con_args = [
             ASConArg(con_parts[0], con_parts[1], con_parts[2], False)
             for con_parts in re.findall(r"(\w+)\s*:\s*(\w+)\s*(?:\=\s*(\w+))?", self.con_code)
         ]
 
-        self.con_arg_ordered_props = []
-        self.con_arg_prop = {}
         eaten_cons = set()
 
         # Round 1 - Matching names and types
-        for con_arg_obj in self.con_args:
-            for prop_obj_name in self.class_props:
-                prop_obj = self.class_props[prop_obj_name]
-                if (
-                    (prop_obj.name.lower().strip() in con_arg_obj.name.lower().strip()) and
-                    (prop_obj.type == con_arg_obj.type) and
-                    (prop_obj not in self.con_arg_ordered_props)
-                ):
-                    eaten_cons.add(con_arg_obj.name)
-                    self.con_arg_prop[prop_obj.name] = con_arg_obj
-                    con_arg_obj.readonly = prop_obj.readonly
-                    self.con_arg_ordered_props.append(prop_obj)
+        for con_arg_i, con_arg_obj in enumerate(self.con_args):
+            con_used = self.class_props.connect(con_arg_i, con_arg_obj, 0)
+            if con_used:
+                eaten_cons.add(con_arg_obj.name)
 
-        # Round 2 - Only matching types
-        for con_arg_obj in self.con_args:
+        # Round 2 - Only matching types and contains the first letter
+        for con_arg_i, con_arg_obj in enumerate(self.con_args):
             if con_arg_obj.name in eaten_cons:
                 continue
-            for prop_obj_name in self.class_props:
-                prop_obj = self.class_props[prop_obj_name]
-                if (
-                    (prop_obj.type == con_arg_obj.type) and
-                    (prop_obj not in self.con_arg_ordered_props)
-                ):
-                    eaten_cons.add(con_arg_obj.name)
-                    self.con_arg_prop[prop_obj.name] = con_arg_obj
-                    con_arg_obj.readonly = prop_obj.readonly
-                    self.con_arg_ordered_props.append(prop_obj)
-
-        # Because con_arg_ordered_props is the properties ordered by the constructor arguments, we need to add
-        # the rest of the properties to this list for everything else
-        # (properties not in the constructor go to the back of the line)
-        for class_prop_name in self.class_props:
-            class_prop = self.class_props[class_prop_name]
-            if class_prop not in self.con_arg_ordered_props:
-                self.con_arg_ordered_props.append(class_prop)
+            con_used = self.class_props.connect(con_arg_i, con_arg_obj, 1)
+            if con_used:
+                eaten_cons.add(con_arg_obj.name)
 
         # All other constructor arguments are assumed to go into super
         self.con_super_args = [con_arg_obj for con_arg_obj in self.con_args if con_arg_obj.name not in eaten_cons]
@@ -225,7 +293,7 @@ class ActionScriptMaker:
         # Identify any imports from all the types which have been parsed which would need an import
         self.class_imports = {
             known_imports[iobj.type]
-            for iobj in self.con_arg_ordered_props
+            for iobj in self.class_props.get_properties()
             if iobj.type in known_imports
         }
 
@@ -294,7 +362,10 @@ class ASMToString(ASMKnownFN):
         "Event": ["type", "bubbles", "cancelable", "eventPhase"],
         "ErrorEvent": ["type", "bubbles", "cancelable", "eventPhase", "text"],
         "TextEvent": ["type", "bubbles", "cancelable", "eventPhase", "activating"],
-        "ActivityEvent": ["type", "bubbles", "cancelable", "eventPhase", "activating"]
+        "ActivityEvent": ["type", "bubbles", "cancelable", "eventPhase", "activating"],
+        "Object" : [],
+        "MouseEvent" : [],
+        "GestureEvent" : ["localX", "localY","ctrlKey","altKey","shiftKey","buttonDown"]
     }
 
     def __post_init__(self):
@@ -302,25 +373,17 @@ class ASMToString(ASMKnownFN):
         rv_args = [f'"{pa}"' for pa in self.parent_args[par_obj]]
         # Because toString sometimes has a description of the function output in a nice parsable format
         # we can use that instead of guessing based on class properties
-        if self.maker.to_string_format is not None:
-            largl = [xx.name.strip() for xx in self.maker.con_arg_ordered_props]
-            # Unless they pull this shit
-            if "..." in self.maker.to_string_format:
-                rv_args.extend(f'"{xx}"' for xx in largl)
-            else:
-                # When writing this, I wasn't clear on what's a stand-in and whats actually a thing so
-                # I added this check so that only add stuff we know is part of this object is added to the
-                # toString arguments
-                largl = [xx.lower() for xx in largl]
-                rv_args.extend(
-                    f'"{s_name.strip()}"' for
-                    s_name, _ in re.findall(r"(\w+)=(\w+)", self.maker.to_string_format)
-                    if s_name.strip().lower() in largl
-                )
-
+        largl = [xx.name.strip() for xx in self.maker.class_props.get_properties_by_con_order()]
+        if (self.maker.to_string_format is not None) and ("..." not in self.maker.to_string_format):
+            found_args_in_format_str = [
+                s_name.strip()
+                for s_name, _ in re.findall(r"(\w+)=(\w+)", self.maker.to_string_format)
+                if s_name.strip() in largl
+            ]
+            rv_args.extend(found_args_in_format_str)
         else:
             # The fallback when the string isn't found, just use the properties and hope for the best
-            rv_args = [f'"{x.name.strip()}"' for x in self.maker.con_arg_ordered_props]
+            rv_args.extend(f'"{xx}"' for xx in largl)
         args = "," + ",".join(rv_args) if rv_args else ""
         fn_temp = Template('return this.formatToString("{{class_name}}"{{args}});')
         self.method_body = fn_temp.render(class_name=self.maker.class_name, args=args)
@@ -332,14 +395,18 @@ class ASMClone(ASMKnownFN):
         "Event": ["type", "bubbles", "cancelable"],
         "ErrorEvent": ["type", "bubbles", "cancelable", "eventPhase", "text", "errorID"],
         "TextEvent": ["type", "bubbles", "cancelable", "eventPhase", "text"],
-        "ActivityEvent": ["type", "bubbles", "cancelable", "eventPhase", "activating"]
+        "ActivityEvent": ["type", "bubbles", "cancelable", "eventPhase", "activating"],
+        "Object" : [],
+        "MouseEvent":["localX", "localY", "relatedObject","ctrlKey","altKey","shiftKey","buttonDown"],
+        "GestureEvent":["localX", "localY","ctrlKey","altKey","shiftKey","buttonDown"]
     }
 
     def __post_init__(self):
         par_obj = self.maker.inher_sig[1]
         args = [f'this.{pa}' for pa in self.parent_args[par_obj]]
         # We already know the constructor arguments -> class properties, so reuse that
-        args.extend(f'this.{x.strip()}' for x in self.maker.con_arg_prop.keys())
+        args.extend(f'this.{x.name.strip()}' for x in self.maker.class_props.get_properties_with_con_order())
+        args = ",".join(args)
         fn_temp = Template('return new {{class_name}}({{args}});')
         self.method_body = fn_temp.render(class_name=self.maker.class_name, args=args)
 
@@ -365,7 +432,7 @@ def make_method_str(maker: ActionScriptMaker):
             meth_make = ASMKnownFN(method, maker)
         method_str += str(meth_make)
 
-    for c in maker.con_arg_ordered_props:
+    for c in maker.class_props.get_properties_by_con_order():
         if c.readonly:
             method_str += Template("""
 
@@ -389,13 +456,13 @@ def write_code(maker: ActionScriptMaker):
     ])
     asmt.class_properties = "\n        ".join([
         f"{'private' if c.readonly else 'public'} var {'_' if c.readonly else ''}{c.name}: {c.type}; // {c.desc}"
-        for c in maker.con_arg_ordered_props
+        for c in maker.class_props.get_properties_by_con_order()
     ])
     asmt.con_def = maker.con_code
     asmt.super_args = ",".join(x.name for x in maker.con_super_args)
     asmt.con_body = "\n            ".join([
-        f"this.{'_' if c_arg.readonly else ''}{p_name} = {c_arg.name};"
-        for p_name, c_arg in maker.con_arg_prop.items()
+        f"this.{'_' if c_arg.readonly else ''}{c_arg.name} = {c_arg.con_arg.name};"
+        for c_arg in maker.class_props.get_properties_with_con_order()
     ])
     asmt.methods = make_method_str(maker)
     asmt.imports = "\n    ".join(maker.class_imports)
@@ -408,6 +475,7 @@ def main():
     p_dir.mkdir(parents=True, exist_ok=True)
     gen_files = [x.stem for x in p_dir.glob("*.as")]
     html_files = list((Path("..") / "output").glob("*.html"))
+    # html_files = [Path("..") / "output" / "AVPauseAtPeriodEndEvent.html"]
     for html_file in html_files:
         class_name = html_file.stem
         # Comment this out to redo everything
@@ -419,13 +487,10 @@ def main():
             asm_maker = ActionScriptMaker(soup)
             (p_dir / f"{class_name}.as").write_text(write_code(asm_maker).strip())
             print(f"Completed {class_name}! Please double check to ensure there are no issues")
-        except Exception as e:
-            print("============================")
-            print(class_name, "FAILED! ")
-            print("Error:")
-            print(e)
+        except UnknownConstructorError as e:
             print("")
-            print("============================")
+            print(class_name, "FAILED!")
+            print("Error: unable to find a constructor definition.")
             (p_dir / f"{class_name}.as").write_text("// FAILED")
 
 
