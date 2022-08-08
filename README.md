@@ -9,6 +9,3 @@ A python script which parses the DOM with `BeautifulSoup`, breaks it apart, and 
 
 ## Verification/inspection (3_comparing_app)
 A Flask App which displays the code next to the appropriate documentation page to allow for easy comparison to ensure everything should be correct.
-
-## Notes
-It didn't work for all events, but there is 84 of them and only needs to be done once, so even a large majority being mostly correct is still good.

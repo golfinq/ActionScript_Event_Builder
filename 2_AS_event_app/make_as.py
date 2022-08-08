@@ -13,7 +13,10 @@ known_imports = {
     "NetStream": "import flash.net.NetStream;",
     "DRMDeviceGroup": "import flash.net.drm.DRMDeviceGroup;",
     "DRMContentData": "import flash.net.drm.DRMContentData;",
-    "DRMVoucher": "import flash.net.drm.DRMVoucher;"
+    "DRMVoucher": "import flash.net.drm.DRMVoucher;",
+    "Dictionary": "import flash.utils.Dictionary;",
+    "IIMEClient": "import flash.text.ime.IIMEClient;",
+    "BitmapData": "import flash.display.BitmapData;"
 }
 
 ASClassProp = namedtuple("ASClassProp", ["name", "type", "desc", "readonly"])
@@ -74,11 +77,11 @@ class ActionScriptMaker:
             for t in cth.find_all("td")
             if "class" in t.attrs
         }
-        
+
         self.class_sig = " ".join(cthd["classSignature"].split())
         self.inher_sig = " ".join(cthd["inheritanceList"].split()).strip().split()
         self.class_name = self.inher_sig[0]
-    
+
     def _make_props(self):
         # Find and Parse Class Properties
         self.class_props = {}
@@ -98,7 +101,7 @@ class ActionScriptMaker:
                 "[read-only]" in desc_tag
             )
             self.class_props[new_prop.name] = new_prop
-    
+
     def _make_methods(self):
         # Find and Parse Class Methods
         self.class_methods = []
@@ -117,7 +120,7 @@ class ActionScriptMaker:
                 " ".join(sig_col.find(class_="summaryTableDescription").text.strip().split())
             )
             self.class_methods.append(new_meth)
-    
+
     def _make_consts(self):
         # Find and Parse Class Constants
         self.class_constants = []
@@ -137,11 +140,11 @@ class ActionScriptMaker:
                 ' '.join(sum_tab.text.strip().split())
             )
             self.class_constants.append(new_const)
-    
+
     def _make_connects(self):
         # Connect (in a very crude manner) bits of code in the web page and parsed code pieces
         # This is one of the least trust-worthy parts of this process
-        
+
         self.valid_code = [
             z.strip() for z in [y for y in [xx.text.strip() for xx in self.soup.find_all("code")] if y]
             if (" function get " not in z) and
@@ -160,14 +163,14 @@ class ActionScriptMaker:
                 if meth.name in code_line and "function" in code_line:
                     code_connect[meth.name] = code_line
         self.code_connect = code_connect
-    
+
     def _make_constructor(self):
         # The constructor is one of the more complicated parts of this process
         # as we need to identify which properties correspond to which input arguments
         # This is done by matching variable names and types; then matching only types. Any input argument
         # which was not identified with a property is assumed to be an input to the super function
         # (this has about a 50/50 correct rate)
-        
+
         self.con_code = self.code_connect[self.class_name]
         self.con_args = [
             ASConArg(con_parts[0], con_parts[1], con_parts[2], False)
@@ -177,29 +180,36 @@ class ActionScriptMaker:
         self.con_arg_ordered_props = []
         self.con_arg_prop = {}
         eaten_cons = set()
-        
+
         # Round 1 - Matching names and types
         for con_arg_obj in self.con_args:
             for prop_obj_name in self.class_props:
                 prop_obj = self.class_props[prop_obj_name]
-                if prop_obj.name.lower().strip() in con_arg_obj.name.lower().strip() and prop_obj.type == con_arg_obj.type:
+                if (
+                    (prop_obj.name.lower().strip() in con_arg_obj.name.lower().strip()) and
+                    (prop_obj.type == con_arg_obj.type) and
+                    (prop_obj not in self.con_arg_ordered_props)
+                ):
                     eaten_cons.add(con_arg_obj.name)
                     self.con_arg_prop[prop_obj.name] = con_arg_obj
                     con_arg_obj.readonly = prop_obj.readonly
                     self.con_arg_ordered_props.append(prop_obj)
-        
+
         # Round 2 - Only matching types
         for con_arg_obj in self.con_args:
             if con_arg_obj.name in eaten_cons:
                 continue
             for prop_obj_name in self.class_props:
                 prop_obj = self.class_props[prop_obj_name]
-                if prop_obj.type == con_arg_obj.type:
+                if (
+                    (prop_obj.type == con_arg_obj.type) and
+                    (prop_obj not in self.con_arg_ordered_props)
+                ):
                     eaten_cons.add(con_arg_obj.name)
                     self.con_arg_prop[prop_obj.name] = con_arg_obj
                     con_arg_obj.readonly = prop_obj.readonly
                     self.con_arg_ordered_props.append(prop_obj)
-        
+
         # Because con_arg_ordered_props is the properties ordered by the constructor arguments, we need to add
         # the rest of the properties to this list for everything else
         # (properties not in the constructor go to the back of the line)
@@ -210,7 +220,7 @@ class ActionScriptMaker:
 
         # All other constructor arguments are assumed to go into super
         self.con_super_args = [con_arg_obj for con_arg_obj in self.con_args if con_arg_obj.name not in eaten_cons]
-    
+
     def _make_import(self):
         # Identify any imports from all the types which have been parsed which would need an import
         self.class_imports = {
@@ -222,7 +232,7 @@ class ActionScriptMaker:
         for iobj in self.con_args:
             if iobj.type in known_imports:
                 self.class_imports.add(known_imports[iobj.type])
-    
+
     def __init__(self, soup) -> None:
         self.soup = soup
         self._make_sig()
@@ -232,7 +242,7 @@ class ActionScriptMaker:
         self._make_connects()
         self._make_constructor()
         self._make_import()
-    
+
     def __str__(self):
         return "ActionScriptMaker(" \
                f"Construct Code={self.con_code}," \
@@ -257,7 +267,7 @@ class ASMKnownFN:
         {
             {{ temp.method_body }}
         }""")
-    
+
     def __init__(
             self,
             method: ASClassMethod,
@@ -265,15 +275,15 @@ class ASMKnownFN:
     ):
         self.method = method
         self.maker = maker
-        
+
         self.method_desc = method.desc
         self.method_con = maker.code_connect[method.name]
         self.method_body = "// Unknown Implementation"
         self.__post_init__()
-    
+
     def __post_init__(self):
         pass
-    
+
     def __str__(self):
         return self.fn_full_temp.render(temp=self)
 
@@ -286,7 +296,7 @@ class ASMToString(ASMKnownFN):
         "TextEvent": ["type", "bubbles", "cancelable", "eventPhase", "activating"],
         "ActivityEvent": ["type", "bubbles", "cancelable", "eventPhase", "activating"]
     }
-    
+
     def __post_init__(self):
         par_obj = self.maker.inher_sig[1]
         rv_args = [f'"{pa}"' for pa in self.parent_args[par_obj]]
@@ -324,12 +334,13 @@ class ASMClone(ASMKnownFN):
         "TextEvent": ["type", "bubbles", "cancelable", "eventPhase", "text"],
         "ActivityEvent": ["type", "bubbles", "cancelable", "eventPhase", "activating"]
     }
-    
+
     def __post_init__(self):
         par_obj = self.maker.inher_sig[1]
         args = [f'this.{pa}' for pa in self.parent_args[par_obj]]
         # We already know the constructor arguments -> class properties, so reuse that
         args.extend(f'this.{x.strip()}' for x in self.maker.con_arg_prop.keys())
+        fn_temp = Template('return new {{class_name}}({{args}});')
         self.method_body = fn_temp.render(class_name=self.maker.class_name, args=args)
 
 
@@ -345,7 +356,7 @@ def make_method_str(maker: ActionScriptMaker):
         # The constructor is already created
         if method.name == maker.class_name:
             continue
-        
+
         if method.name == "toString":
             meth_make = ASMToString(method, maker)
         elif method.name == "clone":
@@ -353,7 +364,7 @@ def make_method_str(maker: ActionScriptMaker):
         else:
             meth_make = ASMKnownFN(method, maker)
         method_str += str(meth_make)
-    
+
     for c in maker.con_arg_ordered_props:
         if c.readonly:
             method_str += Template("""
@@ -363,7 +374,7 @@ def make_method_str(maker: ActionScriptMaker):
             return this._{{ c.name }};
         }
         """).render(c=c)
-    
+
     return method_str
 
 
@@ -388,7 +399,7 @@ def write_code(maker: ActionScriptMaker):
     ])
     asmt.methods = make_method_str(maker)
     asmt.imports = "\n    ".join(maker.class_imports)
-    
+
     return asm_event_template.render(temp=asmt)
 
 
@@ -400,8 +411,8 @@ def main():
     for html_file in html_files:
         class_name = html_file.stem
         # Comment this out to redo everything
-        if class_name in gen_files:
-            continue
+        # if class_name in gen_files:
+        #    continue
         html_doc = html_file.read_text()
         soup = BeautifulSoup(html_doc, 'html.parser')
         try:
