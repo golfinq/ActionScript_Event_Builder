@@ -93,3 +93,8 @@ def get_class_consts(file_key):
 def get_class_details(file_key):
     file_info = get_info(file_key)
     return file_info["organized_details"]
+
+
+def get_class_package(file_key):
+    file_info = get_info(file_key)
+    return file_info["package"]

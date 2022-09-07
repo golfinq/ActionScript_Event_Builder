@@ -11,6 +11,7 @@ class UnknownConstructorError(NameError):
 
 @dataclass
 class ActionScriptTemplate:
+    class_package: str = ""
     class_sig: str = ""
     class_parent: str = ""
     class_constants: str = ""

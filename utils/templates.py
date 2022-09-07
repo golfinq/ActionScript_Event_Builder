@@ -2,7 +2,7 @@ from jinja2 import Template
 
 asm_event_template = Template(
     """
-package flash.events
+package {{ temp.class_package }}
 {
     {% if temp.imports != "" %}
     {{ temp.imports }}

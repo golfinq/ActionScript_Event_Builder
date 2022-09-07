@@ -26,6 +26,7 @@ class ActionScriptMaker:
         self.class_sig = get_class_sig(self.file_path)
         self.inher_sig = get_inherit_sig(self.file_path)
         self.class_name = self.inher_sig[0]
+        self.class_package = "" if is_top_level(self.file_path) else get_class_package(self.file_path)
 
     def _make_props(self):
         # Get the Class Properties from the cache
@@ -243,6 +244,7 @@ def write_code(maker: ActionScriptMaker):
     asmt = ActionScriptTemplate()
     asmt.class_sig = maker.class_sig
     asmt.class_parent = maker.inher_sig[1]
+    asmt.class_package = maker.class_package
     asmt.class_constants = "\n        ".join(
         [f"{maker.code_connect[c.name]}; // {c.desc}" for c in maker.class_constants]
     )
