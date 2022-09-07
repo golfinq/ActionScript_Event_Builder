@@ -5,7 +5,7 @@ package flash.events
     {
         public static const AV_PAUSE_AT_PERIOD_END:String = "avPauseAtPeriodEnd"; // [static]
 
-        public var _userData: int; // [read-only]
+        private var _userData: int; // [read-only]
 
         public function AVPauseAtPeriodEndEvent(type:String, bubbles:Boolean = false, cancelable:Boolean = false, userData:int = 0)
         {
@@ -21,4 +21,3 @@ package flash.events
         
     }
 }
-
