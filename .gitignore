@@ -1,3 +1,6 @@
 .idea**
 .vscode**
 .venv**
+.ignore**
+.vs**
+**__pycache__**
