@@ -21,6 +21,7 @@ class ActionScriptTemplate:
     con_body: str = ""
     methods: str = ""
     imports: str = ""
+    doc_url: str = ""
 
 
 @dataclass

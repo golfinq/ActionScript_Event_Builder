@@ -27,6 +27,7 @@ class ActionScriptMaker:
         self.inher_sig = get_inherit_sig(self.file_path)
         self.class_name = self.inher_sig[0]
         self.class_package = "" if is_top_level(self.file_path) else get_class_package(self.file_path)
+        self.doc_url = str(PurePosixPath(self.file_path)).replace("doc_trunk/doc_pages/", "https://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/")
 
     def _make_props(self):
         # Get the Class Properties from the cache
@@ -245,6 +246,7 @@ def write_code(maker: ActionScriptMaker):
     asmt.class_sig = maker.class_sig
     asmt.class_parent = maker.inher_sig[1]
     asmt.class_package = maker.class_package
+    asmt.doc_url = maker.doc_url
     asmt.class_constants = "\n        ".join(
         [f"{maker.code_connect[c.name]}; // {c.desc}" for c in maker.class_constants]
     )
@@ -275,7 +277,7 @@ def main():
 
     doc_pages_dir = Path("doc_trunk") / "doc_pages"
     # all_files = list((Path("doc_trunk") / "doc_pages").rglob("*.html"))
-    html_files = [doc_pages_dir / "flash" / "events" / "AVPauseAtPeriodEndEvent.html"]
+    html_files = [doc_pages_dir / "flash" / "globalization" / "CollatorMode.html"]
     for html_file in html_files:
         class_name = html_file.stem
         # Comment this out to redo everything
