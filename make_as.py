@@ -247,15 +247,17 @@ def write_code(maker: ActionScriptMaker):
     asmt.class_parent = maker.inher_sig[1]
     asmt.class_package = maker.class_package
     asmt.doc_url = maker.doc_url
-    asmt.class_constants = "\n        ".join(
-        [f"{maker.code_connect[c.name]}; // {c.desc}" for c in maker.class_constants]
-    )
-    asmt.class_properties = "\n        ".join(
-        [
-            f"{'private' if c.readonly else 'public'} var {'_' if c.readonly else ''}{c.name}: {c.type}; // {c.desc}"
-            for c in maker.class_props.get_properties_by_con_order()
-        ]
-    )
+    
+    class_con_lines = []
+    for c in maker.class_constants:
+        class_con_lines.extend([f"// {c.desc}", f"{maker.code_connect[c.name]};", ""])
+    asmt.class_constants = "\n        ".join(class_con_lines)
+    
+    class_prop_lines = []
+    for c in maker.class_props.get_properties_by_con_order():
+        class_prop_lines.extend([f"// {c.desc}", f"{'private' if c.readonly else 'public'} var {'_' if c.readonly else ''}{c.name}: {c.type};", ""])
+    asmt.class_properties = "\n        ".join(class_prop_lines)
+    
     asmt.con_def = maker.con_code
     asmt.super_args = ",".join(x.name for x in maker.con_super_args)
     asmt.con_body = "\n            ".join(

@@ -11,17 +11,24 @@ package {{ temp.class_package }}
     {% if temp.imports != "" %}
     {{ temp.imports }}
     {% endif %}
+    {% if temp.class_parent|lower == "object" %}
+    {{ temp.class_sig }}
+    {% else -%}
     {{ temp.class_sig }} extends {{ temp.class_parent }}
+    {% endif -%}
     {
         {{ temp.class_constants }}
 
         {{ temp.class_properties }}
 
+        {% if temp.con_def != "" %}
         {{ temp.con_def }}
         {
             super({{ temp.super_args }});
             {{ temp.con_body }}
         }
+        {% endif %}
+        
         {{ temp.methods }}
     }
 }
