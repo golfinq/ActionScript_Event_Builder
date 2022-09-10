@@ -51,7 +51,7 @@ def parse_class_header_table(soup):
             )
             for k, v in table_text
         }
-
+        
         class_defs["class_name"] = class_defs["class"][-1]
         class_defs["class_type"] = class_defs["class"][0]
         class_pkg = class_defs["package"]
@@ -90,9 +90,9 @@ def get_constructor_from_soup(soup, class_name):
                 for sib_tag in sibling.find_all("code"):
                     ctt = sib_tag.text
                     if (
-                        ("public" in ctt)
-                        and ("function" in ctt)
-                        and (class_name in ctt)
+                            ("public" in ctt)
+                            and ("function" in ctt)
+                            and (class_name in ctt)
                     ):
                         c_code = ctt
     return c_code
@@ -113,13 +113,13 @@ def get_props_from_soup(soup):
         desc_tag = " ".join(
             sig_col.select_one(".summaryTableDescription").text.strip().split()
         )
-
+        
         next_sib = name_tag.find_next_sibling("a")
         next_sib = next_sib.text if next_sib else ""
         soup_props.append(
             [name_tag.text, next_sib, desc_tag, "[read-only]" in desc_tag]
         )
-
+    
     return soup_props
 
 
@@ -166,19 +166,33 @@ def get_constants_from_soup(soup):
         soup_constants.append(
             [const_name, const_sig, " ".join(sum_tab.text.strip().split())]
         )
-
+    
     return soup_constants
 
 
-def get_details_from_soup(soup):
+def remap_link_to_file(in_link_tag, in_current_file):
+    global thiS_dir
+    try:
+        return str(
+            PurePosixPath(
+                (in_current_file.parent / (in_link_tag.attrs["href"].strip())).resolve()
+            ).relative_to(this_dir)
+        )
+    except AttributeError:
+        return ""
+
+
+def get_details_from_soup(soup, file_path):
+    global this_dir
     soup_details = []
     for page_filter in soup.select("#pageFilter"):
         headers = page_filter.select(".detailHeader") or page_filter.select(
             "#detailHeader"
         )
-
+        
         bodies = page_filter.select(".detailBody") or page_filter.select("#detailBody")
         for header, body in zip(headers, bodies):
+            air_tag = (header.select(".detailHeaderName > span") or [None]).pop()
             details = {
                 "name": strip_list(
                     lmap(strip_get_text, header.select(".detailHeaderName"))
@@ -186,9 +200,12 @@ def get_details_from_soup(soup):
                 "type": strip_list(
                     lmap(strip_get_text, header.select(".detailHeaderType"))
                 ),
+                "is_air": "" if air_tag is None else air_tag.attrs["alt"]
             }
-
+            
             code_tag = body.find("code")
+            details["types_used"] = {link_tag.text.strip(): remap_link_to_file(link_tag, file_path) for link_tag in
+                                     code_tag.find_all("a")} if code_tag else {}
             code_tag = code_tag.text.strip() if code_tag else ""
             details["code"] = code_tag
             soup_details.append(details)
@@ -197,8 +214,30 @@ def get_details_from_soup(soup):
         detail_type = details["type"].lower()
         if detail_type not in orgainized_details:
             orgainized_details[detail_type] = {}
-        orgainized_details[detail_type][details["name"]] = details["code"]
+        orgainized_details[detail_type][details["name"]] = (details["code"], details["is_air"])
     return soup_details, orgainized_details
+
+
+def get_string_format_from_soup(soup, class_name):
+    valid_code = list(
+        filter(
+            lambda z: " function get " not in z
+                      and " function set " not in z
+                      and " " in z,
+            map(lambda x: x.text.strip(), soup.find_all("code")),
+        )
+    )
+    
+    return next(
+        (
+            code_line
+            for code_line in valid_code
+            if class_name in code_line
+               and "[" in code_line
+               and "]" in code_line
+        ),
+        None,
+    )
 
 
 def get_constructor_args(in_constructor):
@@ -216,8 +255,8 @@ def write_to_cache_file():
 def get_file_information(file_path):
     global class_cache
     path_key = str(PurePosixPath(file_path))
-    # if path_key in class_cache:
-    #     return
+    if path_key in class_cache:
+        return
     file_soup = get_soup(file_path)
     class_defs = parse_class_header_table(file_soup)
     if "class_name" not in class_defs:
@@ -231,8 +270,10 @@ def get_file_information(file_path):
     class_defs["methods"] = get_methods_from_soup(file_soup)
     class_defs["constants"] = get_constants_from_soup(file_soup)
     class_defs["details"], class_defs["organized_details"] = get_details_from_soup(
-        file_soup
+        file_soup, file_path
     )
+    class_defs["string_format"] = get_string_format_from_soup(file_soup, class_defs["class_name"])
+    
     class_cache[path_key] = class_defs
 
 

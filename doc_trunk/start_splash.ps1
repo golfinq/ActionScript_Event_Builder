@@ -1,0 +1,1 @@
+docker run -it --network=host --rm scrapinghub/splash
