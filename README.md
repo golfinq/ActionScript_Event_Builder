@@ -20,9 +20,8 @@ is indented for easy readability.
 
 ## Building (make_as.py)
 
-A python script which parses the DOM with `BeautifulSoup` and using the cache from
-the previous step builds an actionscript file which should approximate the
-class described by the documentation page
+A python script uses  `class_parsed.json` to build an actionscript file specified by the
+input path. This generated file should approximate the class described by the documentation page
 
 It may or may not work and requires manual inspection.
 
