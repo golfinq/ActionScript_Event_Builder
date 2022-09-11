@@ -2,7 +2,6 @@ import argparse
 import re
 from pathlib import Path
 
-from bs4 import BeautifulSoup
 from jinja2 import Template
 
 from read_data import *
@@ -12,8 +11,7 @@ from utils.templates import asm_event_template, method_template
 
 
 class ActionScriptMaker:
-    def __init__(self, soup, in_path, include_air) -> None:
-        self.soup = soup
+    def __init__(self, in_path, include_air) -> None:
         self.file_path = in_path
         self.include_air = include_air
         self._make_sig()
@@ -304,9 +302,8 @@ def main():
         if class_name in gen_files:
             continue
         html_doc = html_file.read_text()
-        soup = BeautifulSoup(html_doc, "html.parser")
         try:
-            asm_maker = ActionScriptMaker(soup, html_file, args.include_air)
+            asm_maker = ActionScriptMaker(html_file, args.include_air)
         except UnknownFileError:
             print("Unknown class associated with ", html_file)
             continue
