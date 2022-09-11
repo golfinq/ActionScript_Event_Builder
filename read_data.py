@@ -114,4 +114,4 @@ def get_class_package(file_key):
 
 def get_string_format(file_key):
     file_info = get_info(file_key)
-    return file_info["package"]
+    return file_info["string_format"]
