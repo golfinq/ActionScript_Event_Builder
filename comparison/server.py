@@ -8,7 +8,13 @@ app = Flask(__name__, static_folder="./static", template_folder="./templates")
 
 files = list((Path("..") / "as_gen").glob("*.as"))
 files = sorted(files, key=lambda x: x.stem.lower())
-file_dict = {ff.stem: (ff, re.findall(r"^// https:.+", ff.read_text())[0].replace(r"//","").strip()) for ff in files}
+file_dict = {
+    ff.stem: (
+        ff,
+        re.findall(r"^// https:.+", ff.read_text())[0].replace(r"//", "").strip(),
+    )
+    for ff in files
+}
 
 
 @app.route("/app", methods=["GET"])
