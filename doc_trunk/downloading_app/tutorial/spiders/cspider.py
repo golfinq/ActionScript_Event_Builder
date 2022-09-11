@@ -8,12 +8,17 @@ from scrapy_splash import SplashRequest
 
 tld_doc_dir = Path("..") / "doc_pages"
 
+adobe_url = "https://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/"
+local_url = "http://127.0.0.1:8000/langref/"
+
+
+def fix_url(in_url):
+    return in_url.replace(adobe_url, local_url)
+
 
 def convert_url_into_path(in_url):
     global tld_doc_dir
-    url_chopped = in_url.replace(
-        "https://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/", ""
-    )
+    url_chopped = in_url.replace("http://127.0.0.1:8000/langref", "")
     parts = url_chopped.split("/")
     tfile_name = parts.pop()
     if not parts:
@@ -31,7 +36,9 @@ class SimpleJSWalker(scrapy.Spider):
     def start_requests(self):
         start_urls = [x.strip() for x in Path("url_list.txt").read_text().split()]
         for url in start_urls:
-            yield SplashRequest(url=url, callback=self.parse, endpoint="render.html")
+            yield SplashRequest(
+                url=fix_url(url), callback=self.parse, endpoint="render.html"
+            )
 
     def parse(self, response: scrapy.http.Response):
         dest = convert_url_into_path(response.url)
@@ -40,17 +47,15 @@ class SimpleJSWalker(scrapy.Spider):
 
 class AdobeDepWalker(scrapy.Spider):
     name = "depwalker"
-    start_urls = [
-        "https://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/package-summary.html"
-    ]
-    all_urls = {
-        "https://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/package-summary.html"
-    }
+    start_urls = ["http://127.0.0.1:8000/langref/package-summary.html"]
+    all_urls = {"http://127.0.0.1:8000/langref/package-summary.html"}
 
     def start_requests(self):
         url = self.start_urls.pop()
         logging.info(f"Requesting {str(url)}")
-        yield SplashRequest(url=url, callback=self.parse, endpoint="render.html")
+        yield SplashRequest(
+            url=fix_url(url), callback=self.parse, endpoint="render.html"
+        )
 
     def parse(self, response: scrapy.http.Response):
         logging.info(f"Recieved : {str(response.url)}")
@@ -65,7 +70,7 @@ class AdobeDepWalker(scrapy.Spider):
             for t_row in pkg_table.find_all("tr"):
                 for l_tag in t_row.find_all("a"):
                     link_loc = l_tag.attrs["href"].strip()
-                    link_loc = f"https://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/{link_loc}"
+                    link_loc = f"{local_url}{link_loc}"
                     if link_loc not in self.all_urls:
                         self.all_urls.add(link_loc)
                         found_urls.append(link_loc)
@@ -83,4 +88,6 @@ class AdobeDepWalker(scrapy.Spider):
 
         for f_url in found_urls:
             logging.info(f"Requesting : {str(f_url)}")
-            yield SplashRequest(url=f_url, callback=self.parse, endpoint="render.html")
+            yield SplashRequest(
+                url=fix_url(f_url), callback=self.parse, endpoint="render.html"
+            )

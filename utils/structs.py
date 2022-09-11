@@ -5,7 +5,7 @@ ASClassMethod = namedtuple("ASClassMethod", ["name", "sig", "desc"])
 ASClassConst = namedtuple("ASClassConst", ["name", "sig", "desc"])
 
 
-class UnknownConstructorError(NameError):
+class UnknownFileError(NameError):
     pass
 
 
