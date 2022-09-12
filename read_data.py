@@ -6,8 +6,22 @@ from utils.structs import ASConArg, UnknownFileError
 
 with open("class_parsed.json", "r") as fp:
     class_cache = json.load(fp)
-class_path_to_file = {v["class_path"]: k for k, v in class_cache.items()}
-class_path_to_info = {v["class_path"]: v for v in class_cache.values()}
+class_path_to_file = {v["class_path"].replace("Top.Level.", ""): k for k, v in class_cache.items()}
+
+
+def add_keys(in_dict, keys):
+    if not keys:
+        return
+    n_key = keys.pop(0)
+    if n_key not in in_dict:
+        in_dict[n_key] = {}
+    add_keys(in_dict[n_key], keys)
+
+
+class_tree = {}
+for k in class_cache:
+    ks = k.replace("doc_trunk/doc_pages/", "").replace(".html", "").split(r"/")
+    add_keys(class_tree, ks)
 
 
 @cache
@@ -15,11 +29,7 @@ def get_info(in_key):
     try:
         if isinstance(in_key, PurePath):
             return class_cache[str(PurePosixPath(in_key))]
-        elif isinstance(in_key, str) and ("/" in in_key):
-            return class_cache[in_key]
-        elif isinstance(in_key, str):
-            return class_path_to_info[in_key]
-        raise ValueError(f"Unknown Key : {in_key}")
+        return class_cache[in_key]
     except KeyError as e:
         raise UnknownFileError from e
 

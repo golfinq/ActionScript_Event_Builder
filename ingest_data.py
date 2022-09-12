@@ -1,3 +1,4 @@
+import contextlib
 import json
 import re
 from operator import attrgetter
@@ -80,22 +81,10 @@ def get_inheritance_from_soup(soup, file_path):
     }
 
 
-def get_constructor_from_soup(soup, class_name):
-    c_code = ""
-    for code_tag in soup.find_all(class_="detailSectionHeader"):
-        if code_tag.text.strip() in ["Method Detail", "Constructor Detail"]:
-            for sibling in code_tag.next_siblings:
-                if sibling.attrs.get("class", "") == "detailSectionHeader":
-                    break
-                for sib_tag in sibling.find_all("code"):
-                    ctt = sib_tag.text
-                    if (
-                        ("public" in ctt)
-                        and ("function" in ctt)
-                        and (class_name in ctt)
-                    ):
-                        c_code = ctt
-    return c_code
+def get_constructor_from_organized_details(class_name, organized_details):
+    with contextlib.suppress(KeyError, IndexError):
+        return organized_details["constructor"][class_name][0]
+    return ""
 
 
 def get_props_from_soup(soup):
@@ -263,15 +252,11 @@ def get_file_information(file_path):
     global class_cache
     path_key = str(PurePosixPath(file_path))
     if path_key in class_cache:
-        return
+       return
     file_soup = get_soup(file_path)
     class_defs = parse_class_header_table(file_soup)
     if "class_name" not in class_defs:
         return
-    class_con = get_constructor_from_soup(file_soup, class_defs["class_name"])
-    class_con_args = get_constructor_args(class_con)
-    class_defs["constructor"] = class_con
-    class_defs["constructor_args"] = class_con_args
     class_defs["inheritance_links"] = get_inheritance_from_soup(file_soup, file_path)
     class_defs["properties"] = get_props_from_soup(file_soup)
     class_defs["methods"] = get_methods_from_soup(file_soup)
@@ -282,6 +267,10 @@ def get_file_information(file_path):
     class_defs["string_format"] = get_string_format_from_soup(
         file_soup, class_defs["class_name"]
     )
+    class_con = get_constructor_from_organized_details(class_defs["class_name"], class_defs["organized_details"])
+    class_con_args = get_constructor_args(class_con)
+    class_defs["constructor"] = class_con
+    class_defs["constructor_args"] = class_con_args
 
     class_cache[path_key] = class_defs
 
@@ -290,7 +279,7 @@ def main():
     all_files = list(enumerate((Path("doc_trunk") / "doc_pages").rglob("*.html")))
     for i_path, path in tqdm(all_files):
         get_file_information(path)
-        if (i_path % 100) == 0:
+        if (i_path % 1000) == 0:
             write_to_cache_file()
     write_to_cache_file()
 

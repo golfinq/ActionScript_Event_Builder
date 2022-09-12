@@ -9,19 +9,19 @@ package flash.globalization
     
     public final class DateTimeStyle
     {
-        // [static] Specifies that a custom pattern string is used to specify the date or time style.
+        // Specifies that a custom pattern string is used to specify the date or time style.
         public static const CUSTOM:String = "custom";
         
-        // [static] Specifies the long style of a date or time.
+        // Specifies the long style of a date or time.
         public static const LONG:String = "long";
         
-        // [static] Specifies the medium style of a date or time.
+        // Specifies the medium style of a date or time.
         public static const MEDIUM:String = "medium";
         
-        // [static] Specifies that the date or time should not be included in the formatted string.
+        // Specifies that the date or time should not be included in the formatted string.
         public static const NONE:String = "none";
         
-        // [static] Specifies the short style of a date or time.
+        // Specifies the short style of a date or time.
         public static const SHORT:String = "short";
         
         

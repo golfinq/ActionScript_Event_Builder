@@ -11,20 +11,19 @@ package flash.globalization
     {
         
 
-        // [read-only] The value of the numeric portion of the input string.
+        // The value of the numeric portion of the input string.
         private var _value: Number;
         
-        // [read-only] The index of the first character of the numeric portion of the input string.
+        // The index of the first character of the numeric portion of the input string.
         private var _startIndex: int;
         
-        // [read-only] The index of the character after the last character of the numeric portion of the input string.
+        // The index of the character after the last character of the numeric portion of the input string.
         private var _endIndex: int;
         
 
         
         public function NumberParseResult(value:Number = NaN, startIndex:int = 0x7fffffff, endIndex:int = 0x7fffffff)
         {
-            super();
             this._value = value;
             this._startIndex = startIndex;
             this._endIndex = endIndex;

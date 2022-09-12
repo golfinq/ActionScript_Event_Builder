@@ -24,7 +24,9 @@ package {{ temp.class_package }}
         {% if temp.con_def != "" %}
         {{ temp.con_def }}
         {
+            {% if temp.super_args|length > 0 -%}
             super({{ temp.super_args }});
+            {% endif -%}
             {{ temp.con_body }}
         }
         {% endif %}

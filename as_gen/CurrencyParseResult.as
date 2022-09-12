@@ -11,18 +11,18 @@ package flash.globalization
     {
         
 
-        // [read-only] The currency amount value that was extracted from the input string.
+        // The currency amount value that was extracted from the input string.
         private var _value: Number;
         
-        // [read-only] The portion of the input string that corresponds to the currency symbol or currency string.
+        // The portion of the input string that corresponds to the currency symbol or currency string.
         private var _currencyString: String;
         
 
         
         public function CurrencyParseResult(value:Number = NaN, symbol:String = "")
         {
-            super(symbol);
             this._value = value;
+            this._currencyString = symbol;
         }
         
         
