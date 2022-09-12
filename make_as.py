@@ -77,11 +77,13 @@ class ActionScriptMaker:
 
         code_connect = {
             const.name: class_details["constant"][const.name]
-            for const in self.class_constants
+            for const in self.class_constants 
+            if const.name in class_details["constant"]
         }
 
         for meth in self.class_methods:
-            code_connect[meth.name] = class_details["method"][meth.name]
+            if meth.name in class_details["method"]:
+                code_connect[meth.name] = class_details["method"][meth.name]
         self.code_connect = code_connect
 
     def _make_constructor(self):
@@ -149,9 +151,6 @@ class ActionScriptMaker:
             f"Constants={self.class_constants}, "
             f"Connections={self.code_connect})"
         )
-
-def clean_comment(idesc):
-    return re.sub(r"\[.+\]\s*", "", idesc)
 
 class ASMKnownFN:
     # Due to the somewhat simple nature of toString() and clone()
@@ -262,7 +261,8 @@ def write_code(maker: ActionScriptMaker):
 
     class_con_lines = []
     for c in maker.class_constants:
-        class_con_lines.extend([f"// {clean_comment(c.desc)}", f"{maker.code_connect[c.name]};", ""])
+        if c.name in maker.code_connect:
+            class_con_lines.extend([f"// {clean_comment(c.desc)}", f"{maker.code_connect[c.name]};", ""])
     asmt.class_constants = "\n        ".join(class_con_lines)
 
     class_prop_lines = []
@@ -290,6 +290,11 @@ def write_code(maker: ActionScriptMaker):
 
     return asm_event_template.render(temp=asmt)
 
+def clean_comment(idesc):
+    return re.sub(r"\[(?:read-only|static)\]\s*", "", idesc)
+
+def remove_blank_comments(in_str):
+    return re.sub(r"//\s*$","", in_str)
 
 def remove_multiple_newlines(in_str):
     return re.sub(
@@ -311,6 +316,12 @@ def parse_arguments():
         help="output generated path; Default: `./as_gen`",
     )
     parser.add_argument(
+        "--build-tree",
+        "-b",
+        action="store_true",
+        help="Put the output files into folders corresponding to thier paths",
+    )
+    parser.add_argument(
         "--include-air",
         "-a",
         action="store_true",
@@ -319,6 +330,7 @@ def parse_arguments():
     parser.add_argument(
         "path",
         type=str,
+        nargs='+',
         help="A reference to the classes to make, either a classname or a path x.y.z; path searches will not recursively search and classname will make the first enecountered class with that name",
     )
     return parser.parse_args()
@@ -326,36 +338,43 @@ def parse_arguments():
 
 def main():
     args = parse_arguments()
-    args.path = args.path.strip()
-    search_path = (None, None)
-    if "." in args.path:
-        for path_ele in args.path.split("."):
-            search_path = (
-                class_tree[path_ele] if None in search_path else search_path[0][path_ele],
-                path_ele if None in search_path else f"{search_path[1]}.{path_ele}"
-            )
-        if len(search_path[0].keys()) == 0:
-            search_path = (None, search_path[1])
-            print("Making single class", search_path[1])
+    args.path.sort()
+    input_files = []
+    for ipath in args.path:
+        ipath = ipath.strip()
+        search_path = (None, None)
+        if "." in ipath:
+            for path_ele in ipath.split("."):
+                search_path = (
+                    class_tree[path_ele] if None in search_path else search_path[0][path_ele],
+                    path_ele if None in search_path else f"{search_path[1]}.{path_ele}"
+                )
+            if len(search_path[0].keys()) == 0:
+                search_path = (None, search_path[1])
+                print("Making single class", search_path[1])
+            else:
+                print("Making all classes in ", search_path[1])
         else:
-            print("Making all classes in ", search_path[1])
-    else:
-        for class_path in class_path_to_file:
-            class_name = class_path.split(".").pop()
-            if class_name == args.path:
-                search_path = (None, class_path)
-                break
+            for class_path in class_path_to_file:
+                class_name = class_path.split(".").pop()
+                if class_name == ipath:
+                    search_path = (None, class_path)
+                    break
 
-        print("Making single class ", search_path[1])
-
+            print("Making single class ", search_path[1])
+        ipath_input_files = [class_path_to_file[f"{search_path[1]}.{nested_class}"] for nested_class in search_path[0].keys()] if search_path[0] is not None else [class_path_to_file[search_path[1]]]
+        input_files.extend(ipath_input_files)
+    
     gen_path = Path(args.output)
     gen_path.mkdir(parents=True, exist_ok=True)
     gen_files = [] if args.ignore else [x.stem for x in gen_path.glob("*.as")]
 
-    input_files = [class_path_to_file[f"{search_path[1]}.{nested_class}"] for nested_class in search_path[0].keys()] if search_path[0] is not None else [class_path_to_file[search_path[1]]]
     for class_path in input_files:
         class_path = PurePosixPath(class_path)
         class_name = class_path.stem
+        print(
+            f"Beginning {class_name}..."
+        )
         if class_name in gen_files:
             continue
         try:
@@ -363,12 +382,19 @@ def main():
         except UnknownFileError:
             print("Unknown class associated with ", class_path)
             continue
-        (gen_path / f"{class_name}.as").write_text(
-            remove_multiple_newlines(write_code(asm_maker).strip())
-        )
+        generated_code = remove_multiple_newlines(remove_blank_comments(write_code(asm_maker).strip()))
+        if args.build_tree:
+            out_file = gen_path / class_path.relative_to(PurePosixPath("doc_trunk/doc_pages"))
+            out_file.parent.mkdir(parents=True, exist_ok=True)
+            (out_file.parent / f"{class_name}.as").write_text(generated_code)
+        else:
+            (gen_path / f"{class_name}.as").write_text(generated_code)
         print(
             f"Completed {class_name}! Please double check to ensure there are no issues"
         )
+        print("")
+        print("-------------")
+        print("")
 
 
 if __name__ == "__main__":
