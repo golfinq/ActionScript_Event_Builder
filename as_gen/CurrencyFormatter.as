@@ -11,16 +11,16 @@ package flash.globalization
     {
         
 
-        // [read-only] The name of the requested locale ID that was passed to the constructor of this CurrencyFormatter object.
+        // The name of the requested locale ID that was passed to the constructor of this CurrencyFormatter object.
         private var _requestedLocaleIDName: String;
         
-        // [read-only] The name of the actual locale ID used by this CurrencyFormatter object.
+        // The name of the actual locale ID used by this CurrencyFormatter object.
         private var _actualLocaleIDName: String;
         
-        // [read-only] The three letter ISO 4217 currency code for the actual locale being used.
+        // The three letter ISO 4217 currency code for the actual locale being used.
         private var _currencyISOCode: String;
         
-        // [read-only] The currency symbol or string for the actual locale being used.
+        // The currency symbol or string for the actual locale being used.
         private var _currencySymbol: String;
         
         // The decimal separator character used for formatting or parsing currency amounts that have a decimal part.
@@ -38,7 +38,7 @@ package flash.globalization
         // The character or string used for the grouping separator.
         public var groupingSeparator: String;
         
-        // [read-only] The status of the most recent operation that this CurrencyFormatter object performed.
+        // The status of the most recent operation that this CurrencyFormatter object performed.
         private var _lastOperationStatus: String;
         
         // Specifies whether a leading zero is included in a formatted currency amount when there are no integer digits to the left of the decimal separator.
@@ -63,7 +63,6 @@ package flash.globalization
         
         public function CurrencyFormatter(requestedLocaleIDName:String)
         {
-            super();
             this._requestedLocaleIDName = requestedLocaleIDName;
         }
         
@@ -82,7 +81,7 @@ package flash.globalization
             // Unknown Implementation
         }
 
-        // [static] Lists all of the locale ID names supported by this class.
+        // Lists all of the locale ID names supported by this class.
         public static function getAvailableLocaleIDNames():Vector.<String>
         {
             // Unknown Implementation

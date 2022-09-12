@@ -112,10 +112,12 @@ class ASClassPropList:
                 prop_name_in_con = (
                     prop_name.lower().strip() in in_con_arg.name.lower().strip()
                 )
-            else:
+            elif stage == 1:
                 prop_name_in_con = (
                     prop_name[0].lower().strip() in in_con_arg.name.lower().strip()
                 )
+            else:
+                prop_name_in_con = True
 
             prop_type_match = prop_obj.type == in_con_arg.type
             prop_not_used = prop_obj.con_arg_order < 0

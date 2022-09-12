@@ -9,13 +9,13 @@ package flash.globalization
     
     public final class DateTimeNameStyle
     {
-        // [static] Specifies the full form or full name style for month names and weekday names.
+        // Specifies the full form or full name style for month names and weekday names.
         public static const FULL:String = "full";
         
-        // [static] Specifies the long abbreviation style for month names and weekday names.
+        // Specifies the long abbreviation style for month names and weekday names.
         public static const LONG_ABBREVIATION:String = "longAbbreviation";
         
-        // [static] Specifies the short abbreviation style for month names and weekday names.
+        // Specifies the short abbreviation style for month names and weekday names.
         public static const SHORT_ABBREVIATION:String = "shortAbbreviation";
         
         

@@ -1,6 +1,6 @@
 import argparse
 import re
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from jinja2 import Template
 
@@ -33,6 +33,7 @@ class ActionScriptMaker:
         self.class_sig = get_class_sig(self.file_path)
         self.inher_sig = get_inherit_sig(self.file_path)
         self.class_name = self.inher_sig[0]
+        self.class_parent = self.inher_sig[1]
         self.class_package = (
             "" if is_top_level(self.file_path) else get_class_package(self.file_path)
         )
@@ -108,6 +109,15 @@ class ActionScriptMaker:
             if self.class_props.connect(con_arg_i, con_arg_obj, 1):
                 eaten_cons.add(con_arg_obj.name)
 
+        if self.class_parent.lower() == "object":
+            # This class does not have a super function thus as a final
+            # attempt - will only match by types
+            for con_arg_i, con_arg_obj in enumerate(self.con_args):
+                if con_arg_obj.name in eaten_cons:
+                    continue
+                if self.class_props.connect(con_arg_i, con_arg_obj, 2):
+                    eaten_cons.add(con_arg_obj.name)
+        
         # All other constructor arguments are assumed to go into super
         self.con_super_args = [
             con_arg_obj
@@ -140,6 +150,8 @@ class ActionScriptMaker:
             f"Connections={self.code_connect})"
         )
 
+def clean_comment(idesc):
+    return re.sub(r"\[.+\]\s*", "", idesc)
 
 class ASMKnownFN:
     # Due to the somewhat simple nature of toString() and clone()
@@ -159,7 +171,7 @@ class ASMKnownFN:
         self.method = method
         self.maker = maker
 
-        self.method_desc = method.desc
+        self.method_desc = clean_comment(method.desc)
         self.method_con = maker.code_connect[method.name]
         self.method_body = "// Unknown Implementation"
         self.__post_init__()
@@ -175,7 +187,7 @@ class ASMToString(ASMKnownFN):
     # Roughly make the toString() function
 
     def __post_init__(self):
-        rv_args = [f'"{pa.name}"' for pa in get_parent_args(self.maker.class_name)]
+        rv_args = [pa.name for pa in get_parent_args(self.maker.file_path)]
         # Because toString sometimes has a description of the function output in a nice parsable format
         # we can use that instead of guessing based on class properties
         largl = [
@@ -193,8 +205,8 @@ class ASMToString(ASMKnownFN):
             rv_args.extend(found_args_in_format_str)
         else:
             # The fallback when the string isn't found, just use the properties and hope for the best
-            rv_args.extend(f'"{xx}"' for xx in largl)
-        args = "," + ",".join(rv_args) if rv_args else ""
+            rv_args.extend(largl)
+        args = "," + ",".join(f'"{xx}"' for xx in rv_args) if rv_args else ""
         fn_temp = Template('return this.formatToString("{{class_name}}"{{args}});')
         self.method_body = fn_temp.render(class_name=self.maker.class_name, args=args)
 
@@ -203,7 +215,7 @@ class ASMClone(ASMKnownFN):
     # Roughly make the clone() function
 
     def __post_init__(self):
-        args = [f"this.{pa.name}" for pa in get_parent_args(self.maker.class_name)]
+        args = [f"this.{pa.name}" for pa in get_parent_args(self.maker.file_path)]
         # We already know the constructor arguments -> class properties, so reuse that
         args.extend(
             f"this.{x.name.strip()}"
@@ -212,7 +224,6 @@ class ASMClone(ASMKnownFN):
         args = ",".join(args)
         fn_temp = Template("return new {{class_name}}({{args}});")
         self.method_body = fn_temp.render(class_name=self.maker.class_name, args=args)
-
 
 def make_method_str(maker: ActionScriptMaker):
     # There are three methods we know how to roughly build
@@ -241,25 +252,25 @@ def make_method_str(maker: ActionScriptMaker):
 
     return method_str
 
-
 def write_code(maker: ActionScriptMaker):
     # Write the code itself using all the pieces from the soup
     asmt = ActionScriptTemplate()
     asmt.class_sig = maker.class_sig
-    asmt.class_parent = maker.inher_sig[1]
+    asmt.class_parent = maker.class_parent
     asmt.class_package = maker.class_package
     asmt.doc_url = maker.doc_url
 
     class_con_lines = []
     for c in maker.class_constants:
-        class_con_lines.extend([f"// {c.desc}", f"{maker.code_connect[c.name]};", ""])
+        class_con_lines.extend([f"// {clean_comment(c.desc)}", f"{maker.code_connect[c.name]};", ""])
     asmt.class_constants = "\n        ".join(class_con_lines)
 
     class_prop_lines = []
     for c in maker.class_props.get_properties_by_con_order():
+        
         class_prop_lines.extend(
             [
-                f"// {c.desc}",
+                f"// {clean_comment(c.desc)}",
                 f"{'private' if c.readonly else 'public'} var {'_' if c.readonly else ''}{c.name}: {c.type};",
                 "",
             ]
@@ -307,33 +318,50 @@ def parse_arguments():
     )
     parser.add_argument(
         "path",
-        help="The path of the classes to make, ie x.y.z; searches `./doc_trunk/doc_pages/x/y/z/` for all html files, but will not recursively search",
+        type=str,
+        help="A reference to the classes to make, either a classname or a path x.y.z; path searches will not recursively search and classname will make the first enecountered class with that name",
     )
     return parser.parse_args()
 
 
 def main():
     args = parse_arguments()
-    search_path = None
-    for path_ele in args.path.split("."):
-        search_path = (
-            Path(path_ele) if (search_path is None) else (search_path / path_ele)
-        )
+    args.path = args.path.strip()
+    search_path = (None, None)
+    if "." in args.path:
+        for path_ele in args.path.split("."):
+            search_path = (
+                class_tree[path_ele] if None in search_path else search_path[0][path_ele],
+                path_ele if None in search_path else f"{search_path[1]}.{path_ele}"
+            )
+        if len(search_path[0].keys()) == 0:
+            search_path = (None, search_path[1])
+            print("Making single class", search_path[1])
+        else:
+            print("Making all classes in ", search_path[1])
+    else:
+        for class_path in class_path_to_file:
+            class_name = class_path.split(".").pop()
+            if class_name == args.path:
+                search_path = (None, class_path)
+                break
+
+        print("Making single class ", search_path[1])
+
     gen_path = Path(args.output)
     gen_path.mkdir(parents=True, exist_ok=True)
     gen_files = [] if args.ignore else [x.stem for x in gen_path.glob("*.as")]
 
-    doc_pages_dir = Path("doc_trunk") / "doc_pages"
-    input_files = (doc_pages_dir / search_path).glob("*.html")
-    for html_file in input_files:
-        class_name = html_file.stem
+    input_files = [class_path_to_file[f"{search_path[1]}.{nested_class}"] for nested_class in search_path[0].keys()] if search_path[0] is not None else [class_path_to_file[search_path[1]]]
+    for class_path in input_files:
+        class_path = PurePosixPath(class_path)
+        class_name = class_path.stem
         if class_name in gen_files:
             continue
-        html_doc = html_file.read_text()
         try:
-            asm_maker = ActionScriptMaker(html_file, args.include_air)
+            asm_maker = ActionScriptMaker(class_path, args.include_air)
         except UnknownFileError:
-            print("Unknown class associated with ", html_file)
+            print("Unknown class associated with ", class_path)
             continue
         (gen_path / f"{class_name}.as").write_text(
             remove_multiple_newlines(write_code(asm_maker).strip())

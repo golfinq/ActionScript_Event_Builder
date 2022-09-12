@@ -9,28 +9,27 @@ package flash.globalization
     
     public final class LocaleID
     {
-        // [static] Indicates that the user's default linguistic preferences should be used, as specified in the user's operating system settings.
+        // Indicates that the user's default linguistic preferences should be used, as specified in the user's operating system settings.
         public static const DEFAULT:String = "i-default";
         
 
-        // [read-only] Returns a slightly more "canonical" locale identifier.
+        // Returns a slightly more "canonical" locale identifier.
         private var _name: String;
         
-        // [read-only] The status of the most recent operation that this LocaleID object performed.
+        // The status of the most recent operation that this LocaleID object performed.
         private var _lastOperationStatus: String;
         
 
         
         public function LocaleID(name:String)
         {
-            super();
             this._name = name;
         }
         
         
         
 
-        // [static] Returns a list of acceptable locales based on a list of desired locales and a list of the locales that are currently available.
+        // Returns a list of acceptable locales based on a list of desired locales and a list of the locales that are currently available.
         public static function determinePreferredLocales(want:Vector.<String>, have:Vector.<String>, keyword:String = "userinterface"):Vector.<String>
         {
             // Unknown Implementation
