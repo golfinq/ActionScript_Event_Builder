@@ -5,16 +5,14 @@
 
 package flash.display
 {
-    
-    
+
     public final class ShaderPrecision
     {
         // Represents fast precision mode.
         public static const FAST:String = "fast";
-        
+
         // Represents full precision mode.
         public static const FULL:String = "full";
-        
-        
+
     }
 }

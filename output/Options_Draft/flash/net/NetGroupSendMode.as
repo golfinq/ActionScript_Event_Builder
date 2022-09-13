@@ -5,16 +5,14 @@
 
 package flash.net
 {
-    
-    
+
     public final class NetGroupSendMode
     {
         // Specifies the neighbor with the nearest group address in the decreasing direction.
         public static const NEXT_DECREASING:String = "nextDecreasing";
-        
+
         // Specifies the neighbor with the nearest group address in the increasing direction.
         public static const NEXT_INCREASING:String = "nextIncreasing";
-        
-        
+
     }
 }

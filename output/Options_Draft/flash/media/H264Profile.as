@@ -5,16 +5,14 @@
 
 package flash.media
 {
-    
-    
+
     public final class H264Profile
     {
         // Constant for H.264/AVC baseline profile.
         public static const BASELINE:String = "baseline";
-        
+
         // Constant for H.264/AVC main profile.
         public static const MAIN:String = "main";
-        
-        
+
     }
 }

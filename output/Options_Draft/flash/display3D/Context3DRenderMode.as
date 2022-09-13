@@ -5,16 +5,14 @@
 
 package flash.display3D
 {
-    
-    
+
     public final class Context3DRenderMode
     {
         // Automatically choose rendering engine.
         public static const AUTO:String = "auto";
-        
+
         // Use software 3D rendering.
         public static const SOFTWARE:String = "software";
-        
-        
+
     }
 }

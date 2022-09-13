@@ -5,28 +5,22 @@
 
 package flash.display3D
 {
-    
-    
+
     public final class Context3DTextureFormat
     {
-        // 
         public static const BGRA:String = "bgra";
-        
+
         // 16 bit, bgra packed as 4:4:4:4
         public static const BGRA_PACKED:String = "bgraPacked4444";
-        
+
         // 16 bit, bgr packed as 5:6:5
         public static const BGR_PACKED:String = "bgrPacked565";
-        
-        // 
+
         public static const COMPRESSED:String = "compressed";
-        
-        // 
+
         public static const COMPRESSED_ALPHA:String = "compressedAlpha";
-        
-        // 
+
         public static const RGBA_HALF_FLOAT:String = "rgbaHalfFloat";
-        
-        
+
     }
 }

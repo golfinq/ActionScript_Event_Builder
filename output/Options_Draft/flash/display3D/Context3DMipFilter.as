@@ -5,19 +5,17 @@
 
 package flash.display3D
 {
-    
-    
+
     public final class Context3DMipFilter
     {
         // Select the two closest MIP levels and linearly blend between them (the highest quality mode, but has some performance cost).
         public static const MIPLINEAR:String = "miplinear";
-        
+
         // Use the nearest neighbor metric to select MIP levels (the fastest rendering method).
         public static const MIPNEAREST:String = "mipnearest";
-        
+
         // Always use the top level texture (has a performance penalty when downscaling).
         public static const MIPNONE:String = "mipnone";
-        
-        
+
     }
 }

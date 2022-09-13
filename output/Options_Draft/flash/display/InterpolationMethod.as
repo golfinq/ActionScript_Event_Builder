@@ -5,16 +5,14 @@
 
 package flash.display
 {
-    
-    
+
     public final class InterpolationMethod
     {
         // Specifies that the linear RGB interpolation method should be used.
         public static const LINEAR_RGB:String = "linearRGB";
-        
+
         // Specifies that the RGB interpolation method should be used.
         public static const RGB:String = "rgb";
-        
-        
+
     }
 }

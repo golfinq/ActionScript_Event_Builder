@@ -5,16 +5,14 @@
 
 package flash.media
 {
-    
-    
+
     public final class StageVideoAvailability
     {
         // Stage video is currently available.
         public static const AVAILABLE:String = "available";
-        
+
         // Stage video is not currently available.
         public static const UNAVAILABLE:String = "unavailable";
-        
-        
+
     }
 }

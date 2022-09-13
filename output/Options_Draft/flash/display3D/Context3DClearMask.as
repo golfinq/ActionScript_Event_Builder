@@ -5,22 +5,20 @@
 
 package flash.display3D
 {
-    
-    
+
     public final class Context3DClearMask
     {
         // Clear all buffers.
         public static const ALL:int;
-        
+
         // Clear only the color buffer.
         public static const COLOR:int;
-        
+
         // Clear only the depth buffer.
         public static const DEPTH:int;
-        
+
         // Clear only the stencil buffer.
         public static const STENCIL:int;
-        
-        
+
     }
 }

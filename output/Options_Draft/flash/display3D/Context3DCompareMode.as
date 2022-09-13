@@ -5,34 +5,32 @@
 
 package flash.display3D
 {
-    
-    
+
     public final class Context3DCompareMode
     {
         // The comparison always evaluates as true.
         public static const ALWAYS:String = "always";
-        
+
         // Equal (==).
         public static const EQUAL:String = "equal";
-        
+
         // Greater than (>).
         public static const GREATER:String = "greater";
-        
+
         // Greater than or equal (>=).
         public static const GREATER_EQUAL:String = "greaterEqual";
-        
+
         // Less than (<).
         public static const LESS:String = "less";
-        
+
         // Less than or equal (<=).
         public static const LESS_EQUAL:String = "lessEqual";
-        
+
         // The comparison never evaluates as true.
         public static const NEVER:String = "never";
-        
+
         // Not equal (!=).
         public static const NOT_EQUAL:String = "notEqual";
-        
-        
+
     }
 }

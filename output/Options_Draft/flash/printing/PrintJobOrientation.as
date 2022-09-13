@@ -5,16 +5,14 @@
 
 package flash.printing
 {
-    
-    
+
     public final class PrintJobOrientation
     {
         // The landscape (horizontal) image orientation for printing.
         public static const LANDSCAPE:String = "landscape";
-        
+
         // The portrait (vertical) image orientation for printing.
         public static const PORTRAIT:String = "portrait";
-        
-        
+
     }
 }
