@@ -1,6 +1,6 @@
 # ActionScript Event Builder
 
-A pile of code used to download and convert ActionScript Event documentation and convert it into ActionScript files. Broken up into three main scripts
+A pile of code used to download and convert ActionScript documentation into ActionScript files. Broken up into four main stages
 
 ## Downloading (doc_trunk)
 
@@ -33,5 +33,5 @@ A Flask App which displays the code next to the appropriate documentation page t
 
 Output files have been organized into the `output` directory which contains the following sub-directories
 
-* `Options_Draft` - A staging for the current project ref. [#1](https://github.com/golfinq/ActionScript_Event_Builder/issues/1)
 * `PR_7597` - The Original code for the [Ruffle PR #7597](https://github.com/ruffle-rs/ruffle/pull/7597)
+* `PR_7974` - The Original code for the [Ruffle PR #7974](https://github.com/ruffle-rs/ruffle/pull/7974)
