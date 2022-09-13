@@ -312,8 +312,8 @@ def parse_arguments():
     parser.add_argument(
         "--output",
         "-o",
-        default="as_gen",
-        help="output generated path; Default: `./as_gen`",
+        default="output",
+        help="output generated path; Default: `./output`",
     )
     parser.add_argument(
         "--build-tree",
