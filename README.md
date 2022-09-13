@@ -28,3 +28,10 @@ It may or may not work and requires manual inspection.
 ## Verification/inspection (comparison)
 
 A Flask App which displays the code next to the appropriate documentation page to allow for easy comparison to ensure everything should be correct.
+
+## Current Generated ActionScript Files
+
+Output files have been organized into the `output` directory which contains the following sub-directories
+
+* `Options_Draft` - A staging for the current project ref. [#1](https://github.com/golfinq/ActionScript_Event_Builder/issues/1)
+* `PR_7597` - The Original code for the [Ruffle PR #7597](https://github.com/ruffle-rs/ruffle/pull/7597)
