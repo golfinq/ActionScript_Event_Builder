@@ -23,4 +23,3 @@ package flash.ui
 
     }
 }
-

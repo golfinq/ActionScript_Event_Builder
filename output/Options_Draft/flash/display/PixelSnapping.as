@@ -20,4 +20,3 @@ package flash.display
 
     }
 }
-

@@ -1,5 +1,7 @@
 import argparse
 import re
+import os
+
 from pathlib import Path, PurePosixPath
 
 from jinja2 import Template
@@ -382,7 +384,7 @@ def main():
         except UnknownFileError:
             print("Unknown class associated with ", class_path)
             continue
-        generated_code = remove_multiple_newlines(remove_blank_comments(write_code(asm_maker).strip()))
+        generated_code = remove_multiple_newlines(remove_blank_comments(write_code(asm_maker).strip())) + '\n'
         if args.build_tree:
             out_file = gen_path / class_path.relative_to(PurePosixPath("doc_trunk/doc_pages"))
             out_file.parent.mkdir(parents=True, exist_ok=True)
