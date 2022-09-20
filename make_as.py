@@ -1,18 +1,13 @@
 import argparse
-import re
 import os
-
+import re
 from pathlib import Path, PurePosixPath
 
 from jinja2 import Template
 
 from read_data import *
-from utils.structs import (
-    ActionScriptTemplate,
-    ASClassConst,
-    ASClassMethod,
-    ASClassPropList
-)
+from utils.structs import (ActionScriptTemplate, ASClassConst, ASClassMethod,
+                           ASClassPropList)
 from utils.templates import asm_event_template, method_template
 
 
@@ -364,7 +359,7 @@ def main():
                     break
 
             print("Making single class ", search_path[1])
-        ipath_input_files = [class_path_to_file[f"{search_path[1]}.{nested_class}"] for nested_class in search_path[0].keys()] if search_path[0] is not None else [class_path_to_file[search_path[1]]]
+        ipath_input_files = [class_path_to_file[f"{search_path[1]}.{nested_class}"] for nested_class in search_path[0].keys() if (f"{search_path[1]}.{nested_class}" in class_path_to_file)] if (search_path[0] is not None) else [class_path_to_file[search_path[1]]]
         input_files.extend(ipath_input_files)
     
     gen_path = Path(args.output)
