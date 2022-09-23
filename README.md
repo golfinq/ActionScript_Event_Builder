@@ -35,3 +35,4 @@ Output files have been organized into the `output` directory which contains the 
 
 * `PR_7597` - The Original code for the [Ruffle PR #7597](https://github.com/ruffle-rs/ruffle/pull/7597)
 * `PR_7974` - The Original code for the [Ruffle PR #7974](https://github.com/ruffle-rs/ruffle/pull/7974)
+* `PR_8062` - The Original code for the [Ruffle PR #7974](https://github.com/ruffle-rs/ruffle/pull/8062)
